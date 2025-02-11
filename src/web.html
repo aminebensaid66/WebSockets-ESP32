@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Car Control Simulation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    #car {
+      width: 50px;
+      height: 30px;
+      background-color: blue;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: top 0.1s, left 0.1s;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ESP32 Car Control Simulation</h1>
+  <p>Use the arrow keys to control the car:</p>
+  <p>↑: Forward, ↓: Backward, ←: Left, →: Right</p>
+  <div id="car"></div>
+  <p id="status">Status: Not connected</p>
+
+  <script>
+    // Replace with the IP address of your ESP32
+    const esp32IP = "192.168.1.6"; // Change this to your ESP32's IP address
+    const websocket = new WebSocket(`ws://${esp32IP}:80`);
+
+    // WebSocket connection opened
+    websocket.onopen = function(event) {
+      console.log("WebSocket connected!");
+      document.getElementById("status").innerText = "Status: Connected";
+    };
+
+    // WebSocket connection closed
+    websocket.onclose = function(event) {
+      console.log("WebSocket disconnected!");
+      document.getElementById("status").innerText = "Status: Disconnected";
+    };
+
+    // WebSocket error
+    websocket.onerror = function(error) {
+      console.error("WebSocket error:", error);
+      document.getElementById("status").innerText = "Status: Error";
+    };
+
+    // Get the car element
+    const car = document.getElementById("car");
+
+    // Track the car's position
+    let carX = window.innerWidth / 2; // Start at the center of the screen
+    let carY = window.innerHeight / 2;
+
+    // Update the car's position on the screen
+    function updateCarPosition() {
+      car.style.left = `${carX}px`;
+      car.style.top = `${carY}px`;
+    }
+
+    // Listen for keyboard events
+    document.addEventListener("keydown", function(event) {
+      let command = "";
+      switch (event.key) {
+        case "ArrowUp":
+          command = "FORWARD";
+          carY -= 10; // Move car up
+          break;
+        case "ArrowDown":
+          command = "BACKWARD";
+          carY += 10; // Move car down
+          break;
+        case "ArrowLeft":
+          command = "LEFT";
+          carX -= 10; // Move car left
+          break;
+        case "ArrowRight":
+          command = "RIGHT";
+          carX += 10; // Move car right
+          break;
+      }
+      if (command) {
+        websocket.send(command);
+        console.log("Sent:", command);
+        updateCarPosition(); // Update the car's position on the screen
+      }
+    });
+
+    // Stop the car when a key is released
+    document.addEventListener("keyup", function(event) {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+        websocket.send("STOP");
+        console.log("Sent: STOP");
+      }
+    });
+
+    // Initialize the car's position
+    updateCarPosition();
+  </script>
+</body>
+</html>
