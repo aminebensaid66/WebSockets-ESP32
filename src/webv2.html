@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Car Control Simulation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    #car {
+      width: 50px;
+      height: 30px;
+      background-color: blue;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: top 0.05s linear, left 0.05s linear, transform 0.05s linear;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ESP32 Car Control Simulation</h1>
+  <p>Use the arrow keys to control the car:</p>
+  <p>↑: Forward, ↓: Backward, ←: Turn Left, →: Turn Right</p>
+  <div id="car"></div>
+  <p id="status">Status: Not connected</p>
+
+  <script>
+    const esp32IP = "192.168.1.6"; // Change this to your ESP32's IP
+    const websocket = new WebSocket(`ws://${esp32IP}:80`);
+    const car = document.getElementById("car");
+
+    const angleStep = Math.PI / 18; // 10 degrees per key press in radians
+    const speed = 5; // Speed of movement
+    let carX = window.innerWidth / 2;
+    let carY = window.innerHeight / 2;
+    let carDirectionAngle = 0; // Facing up (0 radians)
+
+    let movingForward = false;
+    let movingBackward = false;
+    let turningLeft = false;
+    let turningRight = false;
+
+    websocket.onopen = function() {
+      document.getElementById("status").innerText = "Status: Connected";
+    };
+
+    websocket.onclose = function() {
+      document.getElementById("status").innerText = "Status: Disconnected";
+    };
+
+    websocket.onerror = function(error) {
+      document.getElementById("status").innerText = "Status: Error";
+    };
+
+    function updateCarPosition() {
+      if (movingForward) {
+        carX += Math.sin(carDirectionAngle) * speed;
+        carY -= Math.cos(carDirectionAngle) * speed;
+      }
+      if (movingBackward) {
+        carX -= Math.sin(carDirectionAngle) * speed;
+        carY += Math.cos(carDirectionAngle) * speed;
+      }
+      if (turningLeft) {
+        carDirectionAngle -= angleStep; // Counterclockwise
+      }
+      if (turningRight) {
+        carDirectionAngle += angleStep; // Clockwise
+      }
+
+      // Update car position and rotation
+      car.style.left = `${carX}px`;
+      car.style.top = `${carY}px`;
+      car.style.transform = `translate(-50%, -50%) rotate(${(carDirectionAngle * 180 / Math.PI)}deg)`;
+    }
+
+    document.addEventListener("keydown", function(event) {
+      let command = "";
+
+      switch (event.key) {
+        case "ArrowUp":
+          if (!movingForward) {
+            movingForward = true;
+            command = "FORWARD";
+          }
+          break;
+        case "ArrowDown":
+          if (!movingBackward) {
+            movingBackward = true;
+            command = "BACKWARD";
+          }
+          break;
+        case "ArrowLeft":
+          if (!turningLeft) {
+            turningLeft = true;
+            command = "LEFT";
+          }
+          break;
+        case "ArrowRight":
+          if (!turningRight) {
+            turningRight = true;
+            command = "RIGHT";
+          }
+          break;
+      }
+
+      if (command) {
+        websocket.send(command);
+      }
+    });
+
+    document.addEventListener("keyup", function(event) {
+      let command = "";
+
+      switch (event.key) {
+        case "ArrowUp":
+          movingForward = false;
+          command = "STOP";
+          break;
+        case "ArrowDown":
+          movingBackward = false;
+          command = "STOP";
+          break;
+        case "ArrowLeft":
+          turningLeft = false;
+          command = "CENTER";
+          break;
+        case "ArrowRight":
+          turningRight = false;
+          command = "CENTER";
+          break;
+      }
+
+      if (command) {
+        websocket.send(command);
+      }
+    });
+
+    // Update car movement smoothly
+    setInterval(updateCarPosition, 50);
+  </script>
+</body>
+</html>

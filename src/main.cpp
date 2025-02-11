@@ -1,9 +1,10 @@
 #include <WiFi.h>
 #include <WebSocketsServer.h>
-
+#include <Arduino.h>
+#include <ESP32Servo.h>
 const char *ssid = "globalnet";
 const char *password = "gnet240819040812";
-
+int servo = 90;
 WebSocketsServer webSocket = WebSocketsServer(80);
 
 // Motor pins
@@ -11,9 +12,9 @@ WebSocketsServer webSocket = WebSocketsServer(80);
 #define MOTOR1_PIN2 14
 #define MOTOR2_PIN1 27
 #define MOTOR2_PIN2 26
-
 // Servo pin
 #define SERVO_PIN 13
+Servo myServo;
 void turnLeft();
 void turnRight();
 void moveForward();
@@ -71,19 +72,23 @@ void moveBackward()
 void turnLeft()
 {
   Serial.println("Turning left");
-  digitalWrite(MOTOR1_PIN1, LOW);
-  digitalWrite(MOTOR1_PIN2, HIGH);
-  digitalWrite(MOTOR2_PIN1, HIGH);
-  digitalWrite(MOTOR2_PIN2, LOW);
+  servo = servo - 10;
+  if (servo < 0)
+  {
+    servo = 0;
+  }
+  myServo.write(servo);
 }
 
 void turnRight()
 {
   Serial.println("Turning right");
-  digitalWrite(MOTOR1_PIN1, HIGH);
-  digitalWrite(MOTOR1_PIN2, LOW);
-  digitalWrite(MOTOR2_PIN1, LOW);
-  digitalWrite(MOTOR2_PIN2, HIGH);
+  servo = servo + 10;
+  if (servo > 180)
+  {
+    servo = 180;
+  }
+  myServo.write(servo);
 }
 
 void stopCar()
@@ -104,8 +109,8 @@ void setup()
   pinMode(MOTOR2_PIN2, OUTPUT);
 
   // Initialize servo pin
-  pinMode(SERVO_PIN, OUTPUT);
-
+  myServo.attach(SERVO_PIN);
+  myServo.write(90);
   // Connect to Wi-Fi
   Serial.begin(115200);
   WiFi.begin(ssid, password);
