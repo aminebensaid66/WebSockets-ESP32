@@ -2,16 +2,19 @@
 #include <WebSocketsServer.h>
 #include <Arduino.h>
 #include <ESP32Servo.h>
-const char *ssid = "globalnet";
-const char *password = "gnet240819040812";
+const char *ssid = "AA";
+const char *password = "insat2024";
 int servo = 90;
+int pwmValue = 50;
+int servovariation = 10;
 WebSocketsServer webSocket = WebSocketsServer(80);
-
 // Motor pins
-#define MOTOR1_PIN1 12
+#define enA 12
 #define MOTOR1_PIN2 14
-#define MOTOR2_PIN1 27
+#define MOTOR1_PIN1 27
 #define MOTOR2_PIN2 26
+#define MOTOR2_PIN1 25
+#define enB 33
 // Servo pin
 #define SERVO_PIN 13
 Servo myServo;
@@ -27,6 +30,15 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
   case WStype_TEXT:
     // Process the command
     String command = (char *)payload;
+    if (command.startsWith("PWM:"))
+    {
+      pwmValue = command.substring(4).toInt();
+    }
+    if (command.startsWith("SERVO:"))
+    {
+      servovariation = command.substring(6).toInt();
+    }
+
     if (command == "FORWARD")
     {
       moveForward();
@@ -58,6 +70,8 @@ void moveForward()
   digitalWrite(MOTOR1_PIN2, LOW);
   digitalWrite(MOTOR2_PIN1, HIGH);
   digitalWrite(MOTOR2_PIN2, LOW);
+  analogWrite(enA, pwmValue);
+  analogWrite(enB, pwmValue);
 }
 
 void moveBackward()
@@ -67,12 +81,14 @@ void moveBackward()
   digitalWrite(MOTOR1_PIN2, HIGH);
   digitalWrite(MOTOR2_PIN1, LOW);
   digitalWrite(MOTOR2_PIN2, HIGH);
+  analogWrite(enA, pwmValue);
+  analogWrite(enB, pwmValue);
 }
 
 void turnLeft()
 {
   Serial.println("Turning left");
-  servo = servo - 10;
+  servo = servo - servovariation;
   if (servo < 0)
   {
     servo = 0;
@@ -83,7 +99,7 @@ void turnLeft()
 void turnRight()
 {
   Serial.println("Turning right");
-  servo = servo + 10;
+  servo = servo + servovariation;
   if (servo > 180)
   {
     servo = 180;
@@ -107,7 +123,8 @@ void setup()
   pinMode(MOTOR1_PIN2, OUTPUT);
   pinMode(MOTOR2_PIN1, OUTPUT);
   pinMode(MOTOR2_PIN2, OUTPUT);
-
+  pinMode(enA, OUTPUT);
+  pinMode(enB, OUTPUT);
   // Initialize servo pin
   myServo.attach(SERVO_PIN);
   myServo.write(90);

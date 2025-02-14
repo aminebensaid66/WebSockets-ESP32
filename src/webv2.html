@@ -24,17 +24,40 @@
       margin-top: 20px;
       font-size: 18px;
     }
+    .control-panel {
+      margin-top: 20px;
+    }
+    input {
+      margin: 5px;
+      padding: 5px;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <h1>ESP32 Car Control Simulation</h1>
-  <p>Use the arrow keys to control the car:</p>
+  <p id="error">Use the arrow keys to control the car:</p>
   <p>↑: Forward, ↓: Backward, ←: Turn Left, →: Turn Right</p>
+  
   <div id="car"></div>
   <p id="status">Status: Not connected</p>
 
+  <!-- Control Panel for PWM and Servo -->
+  <div class="control-panel">
+    <label for="pwm">Motor PWM (0-255):</label>
+    <input type="number" id="pwm" min="0" max="255">
+    
+    <label for="servo">Servo Angle viriation :</label>
+    <input type="number" id="servo" min="0" max="180">
+
+    <button onclick="sendPWMServo()">Set Values</button>
+  </div>
+
   <script>
-    const esp32IP = "192.168.1.6"; // Change this to your ESP32's IP
+    const esp32IP = "10.13.0.33"; // Change this to your ESP32's IP
     const websocket = new WebSocket(`ws://${esp32IP}:80`);
     const car = document.getElementById("car");
 
@@ -144,6 +167,17 @@
         websocket.send(command);
       }
     });
+
+    function sendPWMServo() {
+      const pwmValue = document.getElementById("pwm").value;
+      const servoAngle = document.getElementById("servo").value;
+      const message = `PWM:${pwmValue}`;
+      const message2 =`SERVO:${servoAngle}`;
+      if (websocket.readyState === WebSocket.OPEN) {
+        websocket.send(message);
+        websocket.send(message2);
+      }
+    }
 
     // Update car movement smoothly
     setInterval(updateCarPosition, 50);
