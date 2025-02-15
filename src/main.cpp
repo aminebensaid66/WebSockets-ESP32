@@ -4,14 +4,14 @@
 #include <ESP32Servo.h>
 const char *ssid = "AA";
 const char *password = "insat2024";
-int servo = 90;
+int servo = 110;
 int pwmValue = 50;
 int servovariation = 10;
 WebSocketsServer webSocket = WebSocketsServer(80);
 // Motor pins
 #define enA 12
-#define MOTOR1_PIN2 14
 #define MOTOR1_PIN1 27
+#define MOTOR1_PIN2 14
 #define MOTOR2_PIN2 26
 #define MOTOR2_PIN1 25
 #define enB 33
@@ -100,9 +100,9 @@ void turnRight()
 {
   Serial.println("Turning right");
   servo = servo + servovariation;
-  if (servo > 180)
+  if (servo > 150)
   {
-    servo = 180;
+    servo = 150;
   }
   myServo.write(servo);
 }
