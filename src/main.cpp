@@ -6,9 +6,9 @@
 const char *ssid = "AA";
 const char *password = "insat2024";
 
-int servo = 90; // Start at center position
+int servo = 90;
 int pwmValue = 50;
-int servovariation = 2; // Reduce variation for smoother turning
+int servovariation = 2;
 WebSocketsServer webSocket = WebSocketsServer(80);
 
 // Motor pins
