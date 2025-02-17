@@ -3,15 +3,17 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
-const char *ssid = "AA";
-const char *password = "insat2024";
+const char *ssid = "IEEE";
+const char *password = "";
 
 int servo = 90;
-int pwmValue = 50;
-int servovariation = 2;
+int backwardPWM = 120;
+int pwmValue = 100;    // Start at 0 and gradually increase
+int targetPWM = 255;   // Final target PWM
+int pwmIncrement = 10; // Step size for gradual acceleration
+int servovariation = 10;
 WebSocketsServer webSocket = WebSocketsServer(80);
 
-// Motor pins
 #define enA 12
 #define MOTOR1_PIN1 27
 #define MOTOR1_PIN2 14
@@ -19,21 +21,24 @@ WebSocketsServer webSocket = WebSocketsServer(80);
 #define MOTOR2_PIN1 25
 #define enB 33
 
-// Servo pin
 #define SERVO_PIN 13
 
 bool turning = false;
-int turnDirection = 0; // -1 for left, 1 for right, 0 for neutral
+bool accelerating = false;
+int turnDirection = 0;
 Servo myServo;
 
-unsigned long lastTurnTime = 0; // Timer for smooth turning
-const int turnInterval = 100;   // Delay between servo updates (in milliseconds)
+unsigned long lastTurnTime = 0;
+const int turnInterval = 100;
+unsigned long lastPWMUpdate = 0;
+const int pwmUpdateInterval = 50;
 
 void moveForward();
 void moveBackward();
 void stopCar();
 void stopTurning();
 void smoothTurn();
+void updatePWM();
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 {
@@ -45,7 +50,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 
     if (command.startsWith("PWM:"))
     {
-      pwmValue = command.substring(4).toInt();
+      targetPWM = command.substring(4).toInt();
     }
     if (command.startsWith("SERVO:"))
     {
@@ -54,7 +59,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 
     if (command == "FORWARD")
     {
-      moveForward();
+      accelerating = true; // Start acceleration
     }
     else if (command == "BACKWARD")
     {
@@ -63,12 +68,12 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     else if (command == "LEFT")
     {
       turning = true;
-      turnDirection = -1; // Left turn
+      turnDirection = -1;
     }
     else if (command == "RIGHT")
     {
       turning = true;
-      turnDirection = 1; // Right turn
+      turnDirection = 1;
     }
     else if (command == "STOP")
     {
@@ -89,8 +94,6 @@ void moveForward()
   digitalWrite(MOTOR1_PIN2, LOW);
   digitalWrite(MOTOR2_PIN1, HIGH);
   digitalWrite(MOTOR2_PIN2, LOW);
-  analogWrite(enA, pwmValue);
-  analogWrite(enB, pwmValue);
 }
 
 void moveBackward()
@@ -99,30 +102,44 @@ void moveBackward()
   digitalWrite(MOTOR1_PIN2, HIGH);
   digitalWrite(MOTOR2_PIN1, LOW);
   digitalWrite(MOTOR2_PIN2, HIGH);
-  analogWrite(enA, pwmValue);
-  analogWrite(enB, pwmValue);
+  analogWrite(enA, backwardPWM);
+  analogWrite(enB, backwardPWM);
+}
+
+void updatePWM()
+{
+  if (accelerating && millis() - lastPWMUpdate >= pwmUpdateInterval)
+  {
+    lastPWMUpdate = millis();
+
+    if (pwmValue < targetPWM)
+    {
+      pwmValue += pwmIncrement;
+      if (pwmValue > targetPWM)
+        pwmValue = targetPWM;
+    }
+
+    analogWrite(enA, pwmValue);
+    analogWrite(enB, pwmValue);
+  }
 }
 
 void smoothTurn()
 {
   if (millis() - lastTurnTime >= turnInterval)
   {
-    lastTurnTime = millis(); // Update timer
+    lastTurnTime = millis();
 
-    if (turnDirection == -1 && servo > 0)
+    if (turnDirection == -1 && servo > 50)
     {
       servo -= servovariation;
-      if (servo < 30)
-        servo = 30;
     }
     else if (turnDirection == 1 && servo < 150)
     {
       servo += servovariation;
-      if (servo > 150)
-        servo = 150;
     }
 
-    myServo.write(servo); // Gradual update
+    myServo.write(servo);
   }
 }
 
@@ -139,6 +156,10 @@ void stopCar()
   digitalWrite(MOTOR1_PIN2, LOW);
   digitalWrite(MOTOR2_PIN1, LOW);
   digitalWrite(MOTOR2_PIN2, LOW);
+  pwmValue = 50;
+  accelerating = false;
+  analogWrite(enA, 0);
+  analogWrite(enB, 0);
 }
 
 void setup()
@@ -151,7 +172,7 @@ void setup()
   pinMode(enB, OUTPUT);
 
   myServo.attach(SERVO_PIN);
-  myServo.write(90); // Start at neutral position
+  myServo.write(90);
 
   Serial.begin(115200);
   WiFi.begin(ssid, password);
@@ -170,8 +191,14 @@ void loop()
 {
   webSocket.loop();
 
+  if (accelerating)
+  {
+    moveForward();
+    updatePWM();
+  }
+
   if (turning)
   {
-    smoothTurn(); // Gradual turning
+    smoothTurn();
   }
 }
