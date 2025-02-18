@@ -4,7 +4,7 @@
 #include <ESP32Servo.h>
 
 const char *ssid = "GALAXYA24";
-const char *password = "";
+const char *password = "225380747";
 
 int servo = 90;
 int backwardPWM = 120;
@@ -39,7 +39,7 @@ void stopCar();
 void stopTurning();
 void smoothTurn();
 void updatePWM();
-
+void setServo(int);
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 {
   switch (type)
