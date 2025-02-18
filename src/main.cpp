@@ -55,6 +55,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     if (command.startsWith("SERVO:"))
     {
       servovariation = command.substring(6).toInt();
+      myServo.write(servovariation);
     }
 
     if (command == "FORWARD")
