@@ -2,18 +2,19 @@
 #include <WebSocketsServer.h>
 #include <Arduino.h>
 #include <ESP32Servo.h>
-
+#include "SharpIR.h"
+#define sensorPin 35
 const char *ssid = "GALAXYA24";
 const char *password = "225380747";
-
-int servo = 90;
+int distance;
+int servo = 105;
 int backwardPWM = 120;
 int pwmValue = 100;    // Start at 0 and gradually increase
 int targetPWM = 255;   // Final target PWM
 int pwmIncrement = 10; // Step size for gradual acceleration
 int servovariation = 7;
 WebSocketsServer webSocket = WebSocketsServer(80);
-
+SharpIR mySensor = SharpIR(SharpIR::GP2Y0A41SK0F, 35);
 #define enA 12
 #define MOTOR1_PIN1 27
 #define MOTOR1_PIN2 14
@@ -168,13 +169,14 @@ void stopCar()
 
 void setup()
 {
+
   pinMode(MOTOR1_PIN1, OUTPUT);
   pinMode(MOTOR1_PIN2, OUTPUT);
   pinMode(MOTOR2_PIN1, OUTPUT);
   pinMode(MOTOR2_PIN2, OUTPUT);
   pinMode(enA, OUTPUT);
   pinMode(enB, OUTPUT);
-
+  pinMode(sensorPin, INPUT);
   myServo.attach(SERVO_PIN);
   myServo.write(90);
 
@@ -190,10 +192,38 @@ void setup()
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
 }
+int calculeDistance()
+{
+  float volts = analogRead(35) * (3.3 / 4095); // value from sensor * (3.3/4095)
+  int distance = 13 * pow(volts, -1);          // worked out from datasheet graph
+  if (distance <= 90)
+  {
+    Serial.println(volts); // print the distance
+  }
+  return distance;
+}
+int distanceprev1 = 0;
+int distanceprev2 = 0;
 
 void loop()
 {
+  distanceprev2 = distanceprev1; // Shift previous values
+  distanceprev1 = distance;
+  distance = calculeDistance(); // Get new distance
+
   webSocket.loop();
+
+  // Check if the last three readings are in the range
+  if (distance >= 25 && distance <= 30 &&
+      distanceprev1 >= 25 && distanceprev1 <= 30 &&
+      distanceprev2 >= 25 && distanceprev2 <= 30)
+  {
+    stopCar();
+    moveBackward();
+    delay(250);
+    stopCar();
+    delay(5000);
+  }
 
   if (accelerating)
   {
