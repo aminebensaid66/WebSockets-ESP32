@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
-const char *ssid = "IEEE";
+const char *ssid = "GALAXYA24";
 const char *password = "";
 
 int servo = 90;
@@ -11,7 +11,7 @@ int backwardPWM = 120;
 int pwmValue = 100;    // Start at 0 and gradually increase
 int targetPWM = 255;   // Final target PWM
 int pwmIncrement = 10; // Step size for gradual acceleration
-int servovariation = 10;
+int servovariation = 7;
 WebSocketsServer webSocket = WebSocketsServer(80);
 
 #define enA 12
@@ -31,7 +31,7 @@ Servo myServo;
 unsigned long lastTurnTime = 0;
 const int turnInterval = 100;
 unsigned long lastPWMUpdate = 0;
-const int pwmUpdateInterval = 50;
+const int pwmUpdateInterval = 10;
 
 void moveForward();
 void moveBackward();
@@ -55,7 +55,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     if (command.startsWith("SERVO:"))
     {
       servovariation = command.substring(6).toInt();
-      myServo.write(servovariation);
+      setServo(servovariation);
     }
 
     if (command == "FORWARD")
@@ -143,7 +143,10 @@ void smoothTurn()
     myServo.write(servo);
   }
 }
-
+void setServo(int angle)
+{
+  myServo.write(angle);
+}
 void stopTurning()
 {
   turning = false;
